@@ -1,0 +1,10 @@
+.vscode
+*.pyc
+venv
+samples/*.exe
+*.exe
+shell.py
+buf.py
+shell.bin
+buf.bin
+__pycache__
