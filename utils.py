@@ -4,6 +4,14 @@ from pathlib import Path
 from importlib import import_module
 
 
+def hexstr(val):
+    return f"{val:#0{10}x}"
+
+
+def printhex(val):
+    print(f"{hexstr(val)}")
+
+
 def tabluate(headers: List[str], data: List[List[str]], title: str):
     x = PrettyTable()
     x.field_names = headers
@@ -44,7 +52,7 @@ def shellcode_encoder(shellcode: str) -> bytes:
         if not Path(target_file).is_file():
             print(f"Unable to find a file with text shellcode at {str(target_file)}")
             sys.exit(1)
-        data = Path(target_file).read_text()
+        data = Path(target_file).read_text().replace("\n", "")
         unconverted = data.strip()
 
     elif shellcode.startswith("bin:"):
@@ -59,7 +67,6 @@ def shellcode_encoder(shellcode: str) -> bytes:
 
     hexed = shellcode_hexer(unconverted)
     converted = bytes.fromhex(hexed)
-
     if len(converted) > 4096:
         print("Shellcode is too large. Must be less than 4096")
         sys.exit(1)

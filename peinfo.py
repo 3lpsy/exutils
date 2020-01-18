@@ -4,6 +4,7 @@ from typing import List
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from pefile import PE, machine_types
+from utils import printhex, hexstr
 
 from capstone import Cs, CS_MODE_32, CS_MODE_64, CS_ARCH_X86
 
@@ -49,7 +50,14 @@ def display_pe_info(file: Path, infos: List[str]):
             print()
 
         if "all" in infos or "entry" in infos:
-            print("Entry Point:", hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint))
+            print("Entry Point:", hexstr(pe.OPTIONAL_HEADER.AddressOfEntryPoint))
+            print(
+                "Relative Entry Point:",
+                hexstr(
+                    pe.OPTIONAL_HEADER.AddressOfEntryPoint
+                    + pe.OPTIONAL_HEADER.ImageBase
+                ),
+            )
             print()
 
         if "all" in infos or "start" in infos:
