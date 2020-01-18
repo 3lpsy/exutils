@@ -4,7 +4,15 @@ from pathlib import Path
 from importlib import import_module
 
 
-def hexstr(val):
+def hexslash(val: int) -> str:
+    return r"\x" + r"\x".join(val[n : n + 2] for n in range(0, len(val), 2))
+
+
+def byteslash(val: bytes) -> str:
+    return hexslash(val.hex())
+
+
+def hexstr(val: int):
     return f"{val:#0{10}x}"
 
 

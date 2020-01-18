@@ -12,6 +12,9 @@ class Output:
         self.source = source
         self.expanded_size: int = 0
 
+    def exists(self):
+        return self.target.is_file()
+
     def stat(self):
         return self.target.stat()
 

@@ -6,17 +6,10 @@ from pathlib import Path
 from pefile import PE
 from capstone import CS_ARCH_X86, CS_MODE_32, Cs
 from argparse import ArgumentParser, Namespace
-from utils import hexstr
+from utils import hexstr, hexslash, byteslash
 
 
-def find_entry_point_section(pe, eop_rva):
-    for section in pe.sections:
-        if section.contains_rva(eop_rva):
-            return section
-    return None
-
-
-def display_pe_entry_info(file: Path):
+def work(file: Path):
     pe = PE(str(file))
     eop = pe.OPTIONAL_HEADER.AddressOfEntryPoint
     # A PE file has a preferred base address.
@@ -47,10 +40,32 @@ def display_pe_entry_info(file: Path):
 
     ## finding section by rva w/ eop
     section = pe.get_section_by_rva(eop)
-    data = section.get_data(eop, 32)
+    data = section.get_data(eop)
     cs = Cs(CS_ARCH_X86, CS_MODE_32)
+
+    take = 10
+    instructs = []
+    # addrs = {}
+    # offset = 0
     for i in cs.disasm(data, eop_relative):
-        print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
+        instructs.append(i)
+        # addr = eop_relative + offset
+        # addrs[addr] = i
+        # offset += i.size
+        if len(instructs) >= take:
+            break
+
+    for i in instructs:
+        # print("ID:", i.id)
+        # if addr != i.address:
+        #     print("NE", hexstr(addr), hexstr(i.addd))
+        print("Address:", hexstr(i.address))
+        print("Mnemonic:", i.mnemonic)
+        print("Op String:", i.op_str)
+        print("Size:", i.size)
+        # print("Bytes:", i.bytes.hex())
+        print("Bytes:", byteslash(i.bytes))
+        print()
 
 
 def apply_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -71,10 +86,12 @@ def normalize_args(args: Namespace) -> dict:
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Inspect PE File Entrypoint")
+    parser = ArgumentParser(
+        description="Playground for experimenting with pefile/capstone"
+    )
     parser = apply_parser(parser)
     args = normalize_args(parser.parse_args())
 
-    display_pe_entry_info(Path(args["file"]))
+    work(Path(args["file"]))
 
     sys.exit(0)

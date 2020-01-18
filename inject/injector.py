@@ -23,33 +23,66 @@ class Injector:
         self.output: Output = Output(output, file)
 
         # Loaded /Computed Later
-        self.original: PEManager = None
-        self.target: PEManager = None
+        self.manager: PEManager = None
 
     def inject(self):
+        self.init()
+        self.load()
+        self.expand()
+        self.create_new_section()
+        self.enter_at_new_section()
+        self.write_shellcode()
+        print("-- Injection Complete --")
+
+    def create_new_section(self):
+        self.load_required()
+        print("-- Creating New Section --")
+        self.manager = self.manager.create_new_section(self.shellcode, ".extra")
+
+    def enter_at_last_section(self):
+        print("-- Changing Entry Point --")
+        self.manager = self.manager.enter_at_last_section()
+
+    def write_shellcode(self):
+        print("-- Injecting Shellcode --")
+        self.manager.write_shellcode(self.shellcode)
+
+    def init(self):
         # delete old output if it exists
         self.output.clean()
-
         # copy source file to output file
         self.output.create_from_source()
 
-        # parse freshly copied output
-        self.original = PEManager(self.output)
-        self.original.dump_basic_info()
+    def init_required(self):
+        if not self.is_init():
+            msg = "[!] PEManager not initialized. Output may not exist. Please call 'init' first."
+            print(msg)
+            sys.exit()
 
+    def is_init(self):
+        if not self.output.exists():
+            return False
+        return True
+
+    def expand(self):
         print("-- Expanding File --")
         # actually expand the file
         self.output.expand_for_sc(
-            self.shellcode.get_final_size(), self.original.file_alignment()
+            self.shellcode.get_final_size(), self.manager.file_alignment()
         )
 
-        self.target = self.original.create_new_section(self.shellcode, ".extra")
+    def load(self):
+        self.init_required()
+        print("-- PE Basic Info --")
+        self.manager = PEManager(self.output)
+        self.manager.dump_basic_info()
 
-        print("-- Changing Entry Point --")
+    def load_required(self):
+        if not self.is_loaded():
+            print('[!] PE was not loaded into "manager" target on PEManager')
+            sys.exit()
 
-        self.target = self.target.change_entry_point()
-        print("-- Injecting Shellcode --")
-
-        self.target.write_shellcode(self.shellcode)
-        print("-- Injection Complete --")
-
+    def is_loaded(self):
+        if not self.manager:
+            return False
+        return True

@@ -15,7 +15,6 @@ class PEManager:
         self.pe = PE(str(self.output))
 
     def dump_basic_info(self):
-        print("-- PE Basic Info --")
         print("[*] Number of Sections:", self.number_of_sections())
         printhexi("File Alignment", self.file_alignment())
         printhexi("Section Alignment", self.section_alignment())
@@ -84,7 +83,7 @@ class PEManager:
         self.save_changes()
         self.refresh()
 
-    def change_entry_point(self) -> PEManager:
+    def enter_at_last_section(self) -> PEManager:
         printhexi("Original Entry Point", self.address_of_entry_point())
         print(f"[*] New Last Section Name: {self.last_section().Name.decode()}")
         new_entry_point = self.last_section().VirtualAddress
@@ -98,14 +97,13 @@ class PEManager:
     def create_new_section(self, shellcode: Shellcode, name: str) -> PEManager:
         name = self.normalize_name(name)
         # lets take our size of the new section, and align that as well
-        print("-- Shellcode Size Info --")
         aligned_virtual_size = self.get_aligned_virtual_size(shellcode)
         printhexi("Aligned Virtual Size", aligned_virtual_size)
         aligned_raw_size = self.get_aligned_raw_size(shellcode)
         printhexi("Aligned Raw Size", aligned_raw_size)
 
         # write the new section header
-        print("-- Writing Data --")
+        print("[*] Writing Data")
         printhexi("New Section Offset", self.new_section_offset())
 
         # Set the name
