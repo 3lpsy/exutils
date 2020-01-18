@@ -10,18 +10,21 @@ from inject.enums import HEADER_SIZE, RWE_CHARACTERISTIC
 
 
 class PEManager:
-    def __init__(self, output: Output):
+    def __init__(self, output: Output, options: dict = None):
         self.output = output
         self.pe = PE(str(self.output))
+        # Verbosity
+        options = options or {}
+        self.log_level = int(options.get("log_level", 1))
 
     def dump_basic_info(self):
-        print("[*] Number of Sections:", self.number_of_sections())
-        printhexi("File Alignment", self.file_alignment())
-        printhexi("Section Alignment", self.section_alignment())
-        printhexi("Virtual Offset", self.virtual_offset())
-        printhexi("Aligned Virtual Offset", self.aligned_virtual_offset())
-        printhexi("Raw Offset", self.raw_offset())
-        printhexi("Aligned Raw Offset", self.aligned_raw_offset())
+        self.out("[*] Number of Sections:", self.number_of_sections())
+        self.outhexi("File Alignment", self.file_alignment())
+        self.outhexi("Section Alignment", self.section_alignment())
+        self.outhexi("Virtual Offset", self.virtual_offset())
+        self.outhexi("Aligned Virtual Offset", self.aligned_virtual_offset())
+        self.outhexi("Raw Offset", self.raw_offset())
+        self.outhexi("Aligned Raw Offset", self.aligned_raw_offset())
 
     def number_of_sections(self) -> int:
         return self.pe.FILE_HEADER.NumberOfSections
@@ -31,6 +34,9 @@ class PEManager:
 
     def size_of_image(self):
         return self.pe.OPTIONAL_HEADER.SizeOfImage
+
+    def image_base(self):
+        return self.pe.OPTIONAL_HEADER.ImageBase
 
     def last_section(self):
         return self.pe.sections[self.number_of_sections() - 1]
@@ -77,18 +83,18 @@ class PEManager:
 
     def write_shellcode(self, shellcode: Shellcode):
         raw_offset = self.last_section().PointerToRawData
-        printhexi("Raw Offset for Injection", raw_offset)
-        printhexi("Writing shellcode to offset", raw_offset)
+        self.outhexi("Raw Offset for Injection", raw_offset)
+        self.outhexi("Writing shellcode to offset", raw_offset, level=2)
         self.pe.set_bytes_at_offset(raw_offset, bytes(shellcode))
         self.save_changes()
         self.refresh()
 
     def enter_at_last_section(self) -> PEManager:
-        printhexi("Original Entry Point", self.address_of_entry_point())
-        print(f"[*] New Last Section Name: {self.last_section().Name.decode()}")
+        self.outhexi("Original Entry Point", self.address_of_entry_point())
+        self.out(f"[*] New Last Section Name: {self.last_section().Name.decode()}")
         new_entry_point = self.last_section().VirtualAddress
         self.pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entry_point
-        printhexi("New Entry Point", new_entry_point)
+        self.outhexi("New Entry Point", new_entry_point, level=2)
         self.save_changes()
         self.refresh()
         return self
@@ -98,13 +104,13 @@ class PEManager:
         name = self.normalize_name(name)
         # lets take our size of the new section, and align that as well
         aligned_virtual_size = self.get_aligned_virtual_size(shellcode)
-        printhexi("Aligned Virtual Size", aligned_virtual_size)
+        self.outhexi("Aligned Virtual Size", aligned_virtual_size)
         aligned_raw_size = self.get_aligned_raw_size(shellcode)
-        printhexi("Aligned Raw Size", aligned_raw_size)
+        self.outhexi("Aligned Raw Size", aligned_raw_size)
 
         # write the new section header
-        print("[*] Writing Data")
-        printhexi("New Section Offset", self.new_section_offset())
+        self.out("[*] Writing Data")
+        self.outhexi("New Section Offset", self.new_section_offset())
 
         # Set the name
         self.write_name(name)
@@ -123,61 +129,72 @@ class PEManager:
 
     def write_name(self, name: str):
         name = self.get_encoded_name(name)
-        print(f"[*] Writing name {name} to new section offset")
+        self.out(f"[*] Writing name {name} to new section offset")
         self.pe.set_bytes_at_offset(self.new_section_offset(), name)
 
     def write_aligned_virtual_size(self, aligned_virtual_size):
         dst = self.new_section_offset() + 8
-        printhexi("Writing aligned virtual size to", dst)
+        self.outhexi("Writing aligned virtual size to", dst)
         self.pe.set_dword_at_offset(dst, aligned_virtual_size)
 
     def write_aligned_virtual_offset(self, aligned_virtual_offset):
         dst = self.new_section_offset() + 12
-        printhexi("Writing aligned virtual offset to", dst)
+        self.outhexi("Writing aligned virtual offset to", dst)
         self.pe.set_dword_at_offset(dst, aligned_virtual_offset)
 
     def write_aligned_raw_size(self, aligned_raw_size):
         dst = self.new_section_offset() + 16
-        printhexi("Writing aligned raw size to", dst)
+        self.outhexi("Writing aligned raw size to", dst)
         self.pe.set_dword_at_offset(dst, aligned_raw_size)
 
     def write_aligned_raw_offset(self, aligned_raw_offset):
         dst = self.new_section_offset() + 20
-        printhexi("Writing aligned raw offset to", dst)
+        self.outhexi("Writing aligned raw offset to", dst)
         self.pe.set_dword_at_offset(dst, aligned_raw_offset)
 
     def write_nothing(self, nothing):
         dst = self.new_section_offset() + 24
-        printhexi("Writing nothing to", dst)
+        self.outhexi("Writing nothing to", dst)
         self.pe.set_bytes_at_offset(dst, nothing)
 
     def write_characteristics(self, characteristics):
         dst = self.new_section_offset() + 36
-        printhexi("Writing characteristics to", dst)
+        self.outhexi("Writing characteristics to", dst)
         self.pe.set_dword_at_offset(dst, characteristics)
 
     def increment_number_of_sections(self):
         _original = self.number_of_sections()
         self.pe.FILE_HEADER.NumberOfSections += 1
-        print(
-            f"[*] Increasing section number from {_original} to {self.pe.FILE_HEADER.NumberOfSections}"
+        self.out(
+            f"[*] Increasing section number from {_original} to {self.pe.FILE_HEADER.NumberOfSections}",
+            level=2,
         )
 
     def update_size_of_image(self, new_image_size):
         _orginal_image_size = self.pe.OPTIONAL_HEADER.SizeOfImage
-        printhexi("Original SizeOfImage", _orginal_image_size)
+        self.outhexi("Original SizeOfImage", _orginal_image_size)
         self.pe.OPTIONAL_HEADER.SizeOfImage = new_image_size
-        printhexi("New SizeOfImage", self.pe.OPTIONAL_HEADER.SizeOfImage)
+        self.outhexi("New SizeOfImage", self.pe.OPTIONAL_HEADER.SizeOfImage)
 
     def save_changes(self):
-        print(f"[*] Writing changes to {str(self.output)}")
+        self.out(f"[*] Writing changes to {str(self.output)}")
         self.pe.write(str(self.output))
 
     def refresh(self):
-        print(f"[*] Refreshing PE in current PEManager: {str(self.output)}")
+        self.out(f"[*] Refreshing PE in current PEManager: {str(self.output)}")
         self.pe = PE(str(self.output))
 
     def regenerate(self):
-        print(f"[*] Regenerating PE with new PEManager: {str(self.output)}")
+        self.out(f"[*] Regenerating PE with new PEManager: {str(self.output)}")
         new_pem = PEManager(self.output)
         return new_pem
+
+    def out(self, *msgs, level=1, writer=None):
+        if level >= self.log_level:
+            if writer:
+                writer(*msgs)
+            else:
+                print(*msgs)
+
+    def outhexi(self, *msgs, level=1):
+        self.out(*msgs, level=level, writer=printhexi)

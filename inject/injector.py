@@ -16,36 +16,44 @@ EXTRA_SIZE_TO_RESTORE = 8
 
 
 class Injector:
-    def __init__(self, shellcode: bytes, file: Path, output: Path, options: dict):
+    def __init__(
+        self, shellcode: bytes, file: Path, output: Path, options: dict = None
+    ):
+        # Verbosity
+        options = options or {}
+        self.log_level = int(options.get("log_level", 1))
 
         # Set Basics
         self.shellcode: Shellcode = Shellcode(shellcode, options)
-        self.output: Output = Output(output, file)
+        self.output: Output = Output(output, file, {"log_level": self.log_level})
 
         # Loaded /Computed Later
         self.manager: PEManager = None
 
-    def inject(self):
-        self.init()
-        self.load()
+    def section_injection(self):
+        self.setup()
         self.expand()
         self.create_new_section()
-        self.enter_at_new_section()
+        self.enter_at_last_section()
         self.write_shellcode()
-        print("-- Injection Complete --")
+        self.out("-- Injection Complete --", level=3)
 
     def create_new_section(self):
         self.load_required()
-        print("-- Creating New Section --")
+        self.out("-- Creating New Section --", level=2)
         self.manager = self.manager.create_new_section(self.shellcode, ".extra")
 
     def enter_at_last_section(self):
-        print("-- Changing Entry Point --")
+        self.out("-- Changing Entry Point --", level=2)
         self.manager = self.manager.enter_at_last_section()
 
     def write_shellcode(self):
-        print("-- Injecting Shellcode --")
+        self.out("-- Injecting Shellcode --", level=2)
         self.manager.write_shellcode(self.shellcode)
+
+    def setup(self):
+        self.init()
+        self.load()
 
     def init(self):
         # delete old output if it exists
@@ -59,13 +67,13 @@ class Injector:
             print(msg)
             sys.exit()
 
-    def is_init(self):
+    def is_init(self) -> bool:
         if not self.output.exists():
             return False
         return True
 
     def expand(self):
-        print("-- Expanding File --")
+        self.out("-- Expanding File --", level=2)
         # actually expand the file
         self.output.expand_for_sc(
             self.shellcode.get_final_size(), self.manager.file_alignment()
@@ -73,8 +81,8 @@ class Injector:
 
     def load(self):
         self.init_required()
-        print("-- PE Basic Info --")
-        self.manager = PEManager(self.output)
+        self.manager = PEManager(self.output, options={"log_level": self.log_level})
+        self.out("-- PE Basic Info --")
         self.manager.dump_basic_info()
 
     def load_required(self):
@@ -82,7 +90,14 @@ class Injector:
             print('[!] PE was not loaded into "manager" target on PEManager')
             sys.exit()
 
-    def is_loaded(self):
+    def is_loaded(self) -> bool:
         if not self.manager:
             return False
         return True
+
+    def out(self, *msgs, level=1, writer=None):
+        if level >= self.log_level:
+            if writer:
+                writer(*msgs)
+            else:
+                print(*msgs)

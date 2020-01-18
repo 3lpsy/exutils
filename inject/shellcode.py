@@ -18,6 +18,7 @@ class Shellcode:
                 print(
                     "[!] Jump Distance is not known by Shellcode instance. Cannot restore. Either tell Shellcode the jump distance or disable restoration."
                 )
+                print("[!] Injection failed.")
                 sys.exit(1)
         return self.shellcode
 

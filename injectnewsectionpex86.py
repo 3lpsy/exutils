@@ -70,6 +70,12 @@ def apply_parser(parser: ArgumentParser) -> ArgumentParser:
         help="do not fix the payload with popa and pusha",
         default=False,
     )
+    parser.add_argument(
+        "--enter-new-section",
+        action="store_true",
+        help="enter at new section instead of jumping from original",
+        default=False,
+    )
     return parser
 
 
@@ -96,9 +102,12 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Inject shellcode into new section")
     parser = apply_parser(parser)
     args = normalize_args(parser.parse_args())
-    options = {"should_restore": not args["no_restore"]}
+    options = {
+        "should_restore": not args["no_restore"],
+        "entry": "new_section" if args["enter_new_section"] else "jump",
+    }
     print("-- Starting --")
     manager = Injector(args["shellcode"], args["file"], args["output"], options)
-    manager.inject()
+    manager.section_injection()
     # create_injected_pe(args["shellcode"], args["file"], args["output"], args["no_fix"])
     sys.exit(0)
