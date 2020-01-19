@@ -3,40 +3,11 @@ import sys
 from typing import List, Any
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
+from os.path import join
 from utils import shellcode_encoder
 from pefile import PE
 
 from inject import Injector
-
-# Shoulders of Giants:
-# - https://github.com/rmadair/PE-Injector/blob/master/pe-injector.py
-# - https://axcheron.github.io/code-injection-with-python/#adding-the-section-header
-
-# class SECTION_HEADER(Structure):
-#     _fields_ = [
-#         ("Name",                    BYTE * 8),
-#         ("VirtualSize",             DWORD),
-#         ("VirtualAddress",          DWORD),
-#         ("SizeOfRawData",           DWORD),
-#         ("PointerToRawData",        DWORD),
-#         ("PointerToRelocations",    DWORD),
-#         ("PointerToLinenumbers",    DWORD),
-#         ("NumberOfRelocations",     WORD),
-#         ("NumberOfLinenumbers",     WORD),
-#         ("Characteristics",         DWORD)
-#     ]
-
-# Section Headers
-# Name: contains the section name with a padding of null bytes if the size of the name is not equal to 8 bytes.
-# VirtualSize: contains the size of the section in memory.
-# VirtualAddress: contains the relative virtaul address of the section.
-# SizeOfRawData: contains the size of the section on the disk.
-# PointerToRawData: contains the offset of the section on the disk.
-# Characteristics: contains the flags describing the section characteristics (RWX).
-
-# Alignment (Optional Header)
-# SectionAligment: section alignment in memory.
-# FileAligment: section alignment on the disk.
 
 
 def apply_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -47,15 +18,9 @@ def apply_parser(parser: ArgumentParser) -> ArgumentParser:
         help="shellcode to convert in \\xAA\\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \\AA format in a file via 'txt:/path/to/file', and binary data in a file via 'bin:/path/to/binary')",
         required=True,
     )
+    parser.add_argument("-f", "--file", type=str, help="path to pe file", required=True)
     parser.add_argument(
-        "-f", "--file", type=str, help="path to pe file", required=True,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        help="path to newly created pe file",
-        default="injected.exe",
+        "-o", "--output", type=str, help="path to newly created pe file"
     )
     parser.add_argument(
         "-F",
@@ -71,11 +36,23 @@ def apply_parser(parser: ArgumentParser) -> ArgumentParser:
         default=False,
     )
     parser.add_argument(
-        "--enter-new-section",
-        action="store_true",
-        help="enter at new section instead of jumping from original",
-        default=False,
+        "-c",
+        "--cave",
+        action="store",
+        choices=["auto", "cave", "new-section"],
+        default="auto",
+        help="where to write the shellcode. defaults to auto",
     )
+
+    parser.add_argument(
+        "-e",
+        "--enter",
+        action="store",
+        choices=["jump", "new-section"],
+        default="jump",
+        help="how to handle the entrypoing. defaults to 'jump' where the executable uses 'jmp' to move to new section",
+    )
+
     return parser
 
 
@@ -87,6 +64,20 @@ def normalize_args(args: Namespace) -> dict:
         print(f"[!] File not found at {items['file']}")
         sys.exit(1)
     items["file"] = p_file
+    if not args.output or Path(args.output).is_dir():
+        if Path(args.output).is_dir():
+            parent = args.output
+        else:
+            parent = p_file.parent
+        parts = p_file.name.split(".")
+        if len(parts) > 1:
+            output = (
+                "".join(parts[: len(parts) - 1]) + "-injected." + parts[len(parts) - 1]
+            )
+        else:
+            output = p_file.name + "-injected"
+
+        items["output"] = join(parent, output)
     if items["output"] in ["stdout", "/proc/self/fd/1"]:
         print("[!] Writing to stdout not supported")
         sys.exit(1)
@@ -104,10 +95,10 @@ if __name__ == "__main__":
     args = normalize_args(parser.parse_args())
     options = {
         "should_restore": not args["no_restore"],
-        "entry": "new_section" if args["enter_new_section"] else "jump",
+        "enter": args["enter"],
+        "cave": args["cave"],
     }
-    print("-- Starting --")
     manager = Injector(args["shellcode"], args["file"], args["output"], options)
-    manager.section_injection()
+    manager.inject()
     # create_injected_pe(args["shellcode"], args["file"], args["output"], args["no_fix"])
     sys.exit(0)

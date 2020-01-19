@@ -27,15 +27,38 @@ class Injector:
         self.shellcode: Shellcode = Shellcode(shellcode, options)
         self.output: Output = Output(output, file, {"log_level": self.log_level})
 
+        # Strategies
+        self.cave = options.get("cave", "auto")
+        self.enter = options.get("enter", "jump")
+
         # Loaded /Computed Later
         self.manager: PEManager = None
 
-    def section_injection(self):
+    def inject(self):
         self.setup()
-        self.expand()
-        self.create_new_section()
-        self.enter_at_last_section()
+        if self.cave == "new-section":
+            self.expand()
+            self.create_new_section()  # may regenerate PE
+        else:
+            print(f"[!] Cave option {self.cave} is not supported or recognized.")
+            sys.exit()
+        if self.enter == "new-section":
+            self.enter_at_last_section()
+            self.manager.save()
+        elif self.enter == "jump":
+            original_ins = self.manager.get_ins(take=6)
+            self.enter_with_jump()
+            self.manager.save()
+            new_ins = self.manager.get_ins(take=6)
+            self.out("-- Original Starting Instructions --")
+            self.manager.outins(original_ins)
+            self.out("-- Modified Starting Instructions --")
+            self.manager.outins(new_ins)
+        else:
+            print(f"[!] Enter option {self.enter} is not supported or recognized.")
+            sys.exit()
         self.write_shellcode()
+        self.manager.save()
         self.out("-- Injection Complete --", level=3)
 
     def create_new_section(self):
@@ -47,6 +70,10 @@ class Injector:
         self.out("-- Changing Entry Point --", level=2)
         self.manager = self.manager.enter_at_last_section()
 
+    def enter_with_jump(self):
+        self.out("-- Changing Entry Point --", level=2)
+        self.manager = self.manager.enter_with_jump(self.shellcode)
+
     def write_shellcode(self):
         self.out("-- Injecting Shellcode --", level=2)
         self.manager.write_shellcode(self.shellcode)
@@ -56,6 +83,7 @@ class Injector:
         self.load()
 
     def init(self):
+        self.out("-- Preparing Output --", level=2)
         # delete old output if it exists
         self.output.clean()
         # copy source file to output file

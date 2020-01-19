@@ -12,12 +12,29 @@ def byteslash(val: bytes) -> str:
     return hexslash(val.hex())
 
 
+def byteshex(val: bytes) -> int:
+    return val.hex()
+
+
 def hexstr(val: int):
     return f"{val:#0{10}x}"
 
 
 def printhex(val):
     print(f"{hexstr(val)}")
+
+
+def intbyte(val):
+    h = hex(val)[2:]
+    if h == "0":
+        h = "00"
+    b = bytes.fromhex(h)
+    return b
+
+
+def iterbytes(val):
+    for n in val:
+        yield intbyte(n)
 
 
 def tabluate(headers: List[str], data: List[List[str]], title: str):

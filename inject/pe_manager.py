@@ -1,12 +1,13 @@
 from __future__ import annotations
+from typing import List, Any
 import sys
-
+from struct import pack, unpack
 from pefile import PE
-
+from capstone import Cs, CS_ARCH_X86, CS_MODE_32
 from inject.shellcode import Shellcode
 from inject.output import Output
-from inject.utils import printhexi, align
-from inject.enums import HEADER_SIZE, RWE_CHARACTERISTIC
+from inject.utils import printhexi, align, byteslash, hexstr
+from inject.enums import HEADER_SIZE, RWE_CHARACTERISTIC, IX86_JUMP
 
 
 class PEManager:
@@ -31,6 +32,9 @@ class PEManager:
 
     def address_of_entry_point(self):
         return self.pe.OPTIONAL_HEADER.AddressOfEntryPoint
+
+    def address_of_entry_point_rel(self):
+        return self.pe.OPTIONAL_HEADER.AddressOfEntryPoint + self.image_base()
 
     def size_of_image(self):
         return self.pe.OPTIONAL_HEADER.SizeOfImage
@@ -81,13 +85,15 @@ class PEManager:
             sys.exit(1)
         return name
 
+    def save(self):
+        self.save_changes()
+        self.refresh()
+
     def write_shellcode(self, shellcode: Shellcode):
         raw_offset = self.last_section().PointerToRawData
         self.outhexi("Raw Offset for Injection", raw_offset)
         self.outhexi("Writing shellcode to offset", raw_offset, level=2)
         self.pe.set_bytes_at_offset(raw_offset, bytes(shellcode))
-        self.save_changes()
-        self.refresh()
 
     def enter_at_last_section(self) -> PEManager:
         self.outhexi("Original Entry Point", self.address_of_entry_point())
@@ -95,10 +101,61 @@ class PEManager:
         new_entry_point = self.last_section().VirtualAddress
         self.pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entry_point
         self.outhexi("New Entry Point", new_entry_point, level=2)
-        self.save_changes()
-        self.refresh()
         return self
         # adds new section to the end of the PE file
+
+    def enter_with_jump(self, shellcode: Shellcode) -> PEManager:
+        jump_ops = self.build_jump_ops()
+        restore_data = self.find_jump_restore_data(jump_ops)
+
+        # Provide Shellcode with necessary information
+        if shellcode.should_restore:
+            self.out("-- Restore Info --")
+            self.out("[*] Saving Restore Data For Later")
+            shellcode.set_restore_data(restore_data)
+            cave_address = self.image_base() + self.last_section().VirtualAddress
+            shellcode.set_restore_cave_address(cave_address)
+            jump_to_address = self.address_of_entry_point_rel() + len(restore_data)
+            shellcode.set_restore_jump_to_address(jump_to_address)
+            self.out("-- Restore Operations --")
+            self.outins(self.get_ins_from_data(restore_data))
+        eop = self.address_of_entry_point()
+        if len(jump_ops) < len(restore_data):
+            nops_num = len(restore_data) - len(jump_ops)
+            fill = b"\x90" * nops_num
+            post_jmp_offset = eop + len(jump_ops)
+            self.out(f"[*] Packing {nops_num} Nops at rva {hexstr(post_jmp_offset)}")
+            self.pe.set_bytes_at_rva(post_jmp_offset, fill)
+        else:
+            self.out("[*] No nop pack necessary")
+
+        self.out(f"[*] Writing jump operation at rva {hexstr(eop)}")
+        self.pe.set_bytes_at_rva(eop, jump_ops)
+        return self
+
+    def build_jump_ops(self):
+        last_section_start = self.last_section().VirtualAddress
+        jump_distance = last_section_start - self.address_of_entry_point() - 5
+        self.outhexi("Jump From", self.address_of_entry_point())
+        self.outhexi("Jump To", last_section_start)
+        self.outhexi("Jump Distance", jump_distance)
+        jump_distance = pack("I", jump_distance)
+        jump_ops = IX86_JUMP + jump_distance
+        self.out(f"[*] Jump Operation: {byteslash(jump_ops)}")
+        self.out(f"[*] Jump Op Size: {len(jump_ops)}")
+        return jump_ops
+
+    def find_jump_restore_data(self, jump_ops: bytes) -> bytes:
+        eop = self.address_of_entry_point()
+        restore_data = self.pe.get_memory_mapped_image()[eop : eop + len(jump_ops) + 30]
+        md = Cs(CS_ARCH_X86, CS_MODE_32)
+        offset = 0
+        for i_caps in md.disasm(restore_data, eop + self.image_base()):
+            offset += len(i_caps.bytes)
+            if offset >= len(jump_ops):
+                break
+        restore_data = self.pe.get_memory_mapped_image()[eop : eop + offset]
+        return restore_data
 
     def create_new_section(self, shellcode: Shellcode, name: str) -> PEManager:
         name = self.normalize_name(name)
@@ -189,12 +246,34 @@ class PEManager:
         new_pem = PEManager(self.output)
         return new_pem
 
-    def out(self, *msgs, level=1, writer=None):
+    def get_ins(self, start: int = -1, take: int = 8, offset: int = -1):
+        start = start if start >= 0 else self.address_of_entry_point()
+        offset = offset if offset >= 0 else self.address_of_entry_point_rel()
+        data = self.pe.get_memory_mapped_image()[start : start + 32]
+        return self.get_ins_from_data(data, take, offset)
+
+    def get_ins_from_data(self, data: bytes, take: int = 8, offset: int = -1):
+        offset = offset if offset >= 0 else self.address_of_entry_point_rel()
+        c = 0
+        ins = []
+        for i in Cs(CS_ARCH_X86, CS_MODE_32).disasm(data, offset):
+            ins.append(i)
+            if c >= take:
+                return ins
+            c += 1
+        return ins
+
+    def out(self, *msgs, level: int = 1, writer=None):
         if level >= self.log_level:
             if writer:
                 writer(*msgs)
             else:
                 print(*msgs)
 
-    def outhexi(self, *msgs, level=1):
+    def outhexi(self, *msgs, level: int = 1):
         self.out(*msgs, level=level, writer=printhexi)
+
+    def outins(self, ins: List[Any], level: int = 1):
+        if level >= self.log_level:
+            for i in ins:
+                print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))

@@ -59,3 +59,11 @@ optional arguments:
   -i {all,sections,imported,exported,dump,entry,start}, --info {all,sections,imported,exported,dump,entry,start}
                         information to show
 ```
+
+### Shoulders of Giants:
+
+- https://github.com/rmadair/PE-Injector/blob/master/pe-injector.py
+- https://axcheron.github.io/code-injection-with-python/#adding-the-section-header
+- https://github.com/v-p-b/peCloakCapstone
+- https://github.com/secretsquirrel/the-backdoor-factory
+- https://nightcr4wl3r.blogspot.com/2017/11/automating-backdoor-creation-for-pe.html

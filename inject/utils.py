@@ -1,4 +1,4 @@
-from utils import hexstr
+from utils import hexstr, byteslash
 
 
 def align(val_to_align, alignment):
