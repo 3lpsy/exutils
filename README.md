@@ -1,6 +1,12 @@
 # Exutils: A Small Collection of Python Scripts for Binary Analysis and Manipulation
 
+## About
+
 **This project is meant to be used for educational purposes only or for authorized purposes.**
+
+This project is a work in progress. Not all features are integrated but now the following use cases are supported.
+- Adding a new section and entering at that new section without restoration
+- Adding a new section, jumping to that section, and restoring the original instructions
 
 ## Example
 
