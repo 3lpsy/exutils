@@ -6,99 +6,17 @@ from pathlib import Path
 from os.path import join
 from utils import shellcode_encoder
 from pefile import PE
-
+from parser import make_parser
+from cli import parsers
 from inject import Injector
 
 
-def apply_parser(parser: ArgumentParser) -> ArgumentParser:
-    parser.add_argument(
-        "-s",
-        "--shellcode",
-        type=str,
-        help="shellcode to convert in \\xAA\\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \\AA format in a file via 'txt:/path/to/file', and binary data in a file via 'bin:/path/to/binary')",
-        required=True,
-    )
-    parser.add_argument("-f", "--file", type=str, help="path to pe file", required=True)
-    parser.add_argument(
-        "-o", "--output", type=str, help="path to newly created pe file"
-    )
-    parser.add_argument(
-        "-F",
-        "--force",
-        action="store_true",
-        help="force overwrite output",
-        default=False,
-    )
-    parser.add_argument(
-        "--no-restore",
-        action="store_true",
-        help="do not fix the payload with popa and pusha",
-        default=False,
-    )
-    parser.add_argument(
-        "-c",
-        "--cave",
-        action="store",
-        choices=["auto", "cave", "new-section"],
-        default="auto",
-        help="where to write the shellcode. defaults to auto",
-    )
-
-    parser.add_argument(
-        "-e",
-        "--enter",
-        action="store",
-        choices=["jump", "new-section"],
-        default="jump",
-        help="how to handle the entrypoing. defaults to 'jump' where the executable uses 'jmp' to move to new section",
-    )
-
-    return parser
-
-
-def normalize_args(args: Namespace) -> dict:
-    items = vars(args)
-    items["shellcode"] = shellcode_encoder(items["shellcode"])
-    p_file = Path(items["file"])
-    if not p_file.is_file():
-        print(f"[!] File not found at {items['file']}")
-        sys.exit(1)
-    items["file"] = p_file
-    if not args.output or Path(args.output).is_dir():
-        if Path(args.output).is_dir():
-            parent = args.output
-        else:
-            parent = p_file.parent
-        parts = p_file.name.split(".")
-        if len(parts) > 1:
-            output = (
-                "".join(parts[: len(parts) - 1]) + "-injected." + parts[len(parts) - 1]
-            )
-        else:
-            output = p_file.name + "-injected"
-
-        items["output"] = join(parent, output)
-    if items["output"] in ["stdout", "/proc/self/fd/1"]:
-        print("[!] Writing to stdout not supported")
-        sys.exit(1)
-    p_output = Path(items["output"])
-    if p_output.is_file() and not items["force"]:
-        print("[!] Output file already exists. Delete it or use '--force' to overwrite")
-        sys.exit(1)
-    items["output"] = p_output
-    return items
-
-
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Inject shellcode into new section")
-    parser = apply_parser(parser)
-    args = normalize_args(parser.parse_args())
-    options = {
-        "should_restore": not args["no_restore"],
-        "enter": args["enter"],
-        "cave": args["cave"],
-    }
-    manager = Injector(args["shellcode"], args["file"], args["output"], options)
-    manager.inject()
-    # create_injected_pe(args["shellcode"], args["file"], args["output"], args["no_fix"])
-    sys.exit(0)
+    parser = make_parser()
+    args = parser.parse_args()
+    for command, parser_funcs in parsers.items():
+        if args.command == command:
+            normalize = parser_funcs[1]
+            run = parser_funcs[2]
+            sys.exit(run(normalize(args)))
+    sys.exit(parser.print_help())

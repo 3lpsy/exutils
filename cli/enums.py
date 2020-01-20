@@ -1,0 +1,1 @@
+SHELLCODE_HELP = "shellcode to convert in \\xAA\\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \\AA format in a file via 'txt:/path/to/file', and binary data in a file via 'bin:/path/to/binary')"

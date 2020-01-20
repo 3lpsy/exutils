@@ -9,6 +9,8 @@ def hexslash(val: int) -> str:
 
 
 def byteslash(val: bytes) -> str:
+    if not isinstance(val, bytes):
+        raise Exception("Value is not bytes for 'byteslash' method.")
     return hexslash(val.hex())
 
 

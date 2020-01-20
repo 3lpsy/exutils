@@ -1,5 +1,6 @@
 .vscode
 *.pyc
+zzz.py
 venv
 samples/*.exe
 *.exe

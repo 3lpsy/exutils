@@ -42,6 +42,7 @@ class Injector:
         else:
             print(f"[!] Cave option {self.cave} is not supported or recognized.")
             sys.exit()
+
         if self.enter == "new-section":
             self.enter_at_last_section()
             self.manager.save()

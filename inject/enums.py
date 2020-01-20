@@ -2,9 +2,4 @@ HEADER_SIZE = 40
 EXTRA_SIZE_TO_RESTORE = 24
 RWE_CHARACTERISTIC = 0xE0000020
 
-IX86_PUSHAD = b"\x60"
-IX86_PUSHFD = b"\x9C"
-
-IX86_POPAD = b"\x61"
-IX86_JUMP = b"\xe9"
-IX86_NOP = b"\x90"
+from inject.opcodes import *

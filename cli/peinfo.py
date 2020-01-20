@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 import sys
 from typing import List
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, _SubParsersAction
 from pathlib import Path
 from pefile import PE, machine_types
 from utils import printhex, hexstr
@@ -14,7 +13,9 @@ PELIB_TO_CAP = {
 }
 
 
-def display_pe_info(file: Path, infos: List[str]):
+def run(args):
+    file = args["file"]
+    infos = args["infos"]
     pe = PE(str(file))
     if "dump" in infos:
         print(pe.dump_info())
@@ -82,7 +83,8 @@ def display_pe_info(file: Path, infos: List[str]):
                 )
 
 
-def apply_parser(parser: ArgumentParser) -> ArgumentParser:
+def apply(subparser: _SubParsersAction) -> ArgumentParser:
+    parser = subparser.add_parser("peinfo", help="get info about pefile")
     parser.add_argument(
         "-f", "--file", type=str, help="path to pe file", required=True,
     )
@@ -97,7 +99,7 @@ def apply_parser(parser: ArgumentParser) -> ArgumentParser:
     return parser
 
 
-def normalize_args(args: Namespace) -> dict:
+def normalize(args: Namespace) -> dict:
     items = vars(args)
     if not items["info"]:
         items["info"] = ["all"]
@@ -108,12 +110,3 @@ def normalize_args(args: Namespace) -> dict:
     items["file"] = p_file
     return items
 
-
-if __name__ == "__main__":
-    parser = ArgumentParser(description="Inspect PE File")
-    parser = apply_parser(parser)
-    args = normalize_args(parser.parse_args())
-
-    display_pe_info(Path(args["file"]), args["info"])
-
-    sys.exit(0)

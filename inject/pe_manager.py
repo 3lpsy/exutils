@@ -104,6 +104,7 @@ class PEManager:
         return self
         # adds new section to the end of the PE file
 
+    # Overwrite first (or multiple) instructiosn with jump to cave
     def enter_with_jump(self, shellcode: Shellcode) -> PEManager:
         jump_ops = self.build_jump_ops()
         restore_data = self.find_jump_restore_data(jump_ops)
@@ -113,12 +114,14 @@ class PEManager:
             self.out("-- Restore Info --")
             self.out("[*] Saving Restore Data For Later")
             shellcode.set_restore_data(restore_data)
+            shellcode.set_restore_ep_relative(self.address_of_entry_point_rel())
             cave_address = self.image_base() + self.last_section().VirtualAddress
             shellcode.set_restore_cave_address(cave_address)
             jump_to_address = self.address_of_entry_point_rel() + len(restore_data)
             shellcode.set_restore_jump_to_address(jump_to_address)
             self.out("-- Restore Operations --")
             self.outins(self.get_ins_from_data(restore_data))
+
         eop = self.address_of_entry_point()
         if len(jump_ops) < len(restore_data):
             nops_num = len(restore_data) - len(jump_ops)
@@ -154,8 +157,13 @@ class PEManager:
             offset += len(i_caps.bytes)
             if offset >= len(jump_ops):
                 break
+
+        # regrab instructions so it doesn't split on offset (grab whole instructions)
         restore_data = self.pe.get_memory_mapped_image()[eop : eop + offset]
         return restore_data
+
+    def update_restore_data_for_rel(self, restore_data):
+        pass
 
     def create_new_section(self, shellcode: Shellcode, name: str) -> PEManager:
         name = self.normalize_name(name)

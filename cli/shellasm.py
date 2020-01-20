@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 import sys
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, _SubParsersAction
 from utils import shellcode_encoder
+from cli.enums import SHELLCODE_HELP
 from capstone import Cs, CS_MODE_32, CS_MODE_64, CS_ARCH_X86
 
 ARCHES = {"x86": CS_ARCH_X86}
 MODES = {"x32": CS_MODE_32, "x64": CS_MODE_64}
 
 
-def display_assembly(shellcode: bytes, arch: int, mode: int, start: int):
+def run(args):
+    shellcode = args["shellcode"]
+    arch = ARCHES[args["arch"]]
+    mode = MODES[args["mode"]]
+    start = args["start"]
     md = Cs(arch, mode)
     for (address, size, mnemonic, op_str) in md.disasm_lite(shellcode, start):
         print("0x%x:\t%s\t%s" % (address, mnemonic, op_str))
 
 
-def apply_parser(parser: ArgumentParser) -> ArgumentParser:
+def apply(subparser: _SubParsersAction) -> ArgumentParser:
+    parser = subparser.add_parser("shellasm", help="get asm from shellcode")
     parser.add_argument(
-        "-s",
-        "--shellcode",
-        type=str,
-        help="shellcode to convert in \\xAA\\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \\AA format in a file via 'txt:/path/to/file', and binary data in a file via 'bin:/path/to/binary')",
-        required=True,
+        "-s", "--shellcode", type=str, help=SHELLCODE_HELP, required=True,
     )
     parser.add_argument(
         "-a",
@@ -49,7 +51,7 @@ def apply_parser(parser: ArgumentParser) -> ArgumentParser:
     return parser
 
 
-def normalize_args(args: Namespace) -> dict:
+def normalize(args: Namespace) -> dict:
     items = vars(args)
     items["shellcode"] = shellcode_encoder(args.shellcode)
 
@@ -59,14 +61,3 @@ def normalize_args(args: Namespace) -> dict:
         items["start"] = int(args.start)
 
     return items
-
-
-if __name__ == "__main__":
-    parser = ArgumentParser(description="Convert shellcode to assembly")
-    parser = apply_parser(parser)
-    args = normalize_args(parser.parse_args())
-
-    display_assembly(
-        args["shellcode"], ARCHES[args["arch"]], MODES[args["mode"]], args["start"]
-    )
-    sys.exit(0)
