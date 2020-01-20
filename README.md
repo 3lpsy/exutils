@@ -1,5 +1,7 @@
 # Exutils: A Small Collection of Python Scripts for Binary Analysis and Manipulation
 
+**This project is meant to be used for educational purposes only or for authorized purposes.**
+
 ## Usage
 
 ```
