@@ -8,6 +8,8 @@ This project is a work in progress. Not all features are integrated but now the 
 - Adding a new section and entering at that new section without restoration
 - Adding a new section, jumping to that section, and restoring the original instructions
 
+The goal is to leverage pefile and capstone to create a stripped down version of the Backdoor factory targeting 32 and 64 bit x86 systems that is easy to develop with.
+
 ## TODO
 - [ ] Use an xor/encoder stub
 - [ ] Discover code cave in .text and write to there 
