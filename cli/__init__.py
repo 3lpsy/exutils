@@ -17,13 +17,15 @@ def extract_parsers(parent_dir, parent_mod):
                     and Path(join(parent_dir, f)).is_file()
                 ):
                     base_name = f.split(".")[0]
+                    command_name = base_name.replace("_", "-")
+
                     module_path = f"{parent_mod}.{base_name}"
                     module = import_module(module_path, "normalize")
                     normalize = getattr(module, "normalize", None)
                     apply = getattr(module, "apply", None)
                     run = getattr(module, "run", None)
                     if normalize and apply:
-                        _parsers[base_name] = (apply, normalize, run)
+                        _parsers[command_name] = (apply, normalize, run)
                     else:
                         print(
                             f"failed to find command parser helpers for {module_path}"

@@ -30,79 +30,47 @@ $ ./injectx86.py build -s txt:/path/to/payload/local.txt -f samples/puttygen-x86
 ## Usage
 
 ```
-usage: injectx86.py [-h] {build,peinfo,shellasm} ...
+usage: exutils.py [-h] {binasm,build,expand,new-section,peinfo,shellasm} ...
 
 Inject shellcode into new section
 
 positional arguments:
-  {build,peinfo,shellasm}
+  {binasm,build,expand,new-section,peinfo,shellasm}
                         action
+    binasm              get asm from shellcode
     build               build injected binary
+    expand              expand binary (creates a copy)
+    new-section         add a new section (copies and expands source file)
     peinfo              get info about pefile
     shellasm            get asm from shellcode
 
 optional arguments:
   -h, --help            show this help message and exit
+
 ```
 
-### build;
+### build
 
 Inject shellcode into a binary by creating a new section and changing the entrypoint via pefile. Attempts can be made to 'fix' the executable so that it restores the registers.
 
 ```
-usage: injectx86.py build [-h] -s SHELLCODE -f FILE [-o OUTPUT] [-F] [--no-restore] [-c {auto,cave,new-section}] [-e {jump,new-section}]
+usage: exutils.py build [-h] -s SHELLCODE -f FILE [-o OUTPUT] [-F] [--no-restore] [--nop-restore-data] [-c {auto,cave,new-section}] [-e {jump,new-section}]
 
 optional arguments:
   -h, --help            show this help message and exit
   -s SHELLCODE, --shellcode SHELLCODE
-                        shellcode to convert in \xAA\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \AA format in a file via 'txt:/path/to/file', and binary data in a file
-                        via 'bin:/path/to/binary')
+                        shellcode to convert in \xAA\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \AA format in a file via 'txt:/path/to/file', and binary data in a file via
+                        'bin:/path/to/binary')
   -f FILE, --file FILE  path to source pe file
   -o OUTPUT, --output OUTPUT
                         path to newly created pe file
   -F, --force           force overwrite output
   --no-restore          do not fix the payload with popa and pusha
+  --nop-restore-data    fill replaced/removed original instructions with NOPs instead of appending them to shellcode
   -c {auto,cave,new-section}, --cave {auto,cave,new-section}
                         where to write the shellcode. defaults to auto
   -e {jump,new-section}, --enter {jump,new-section}
                         how to handle the entrypoing. defaults to 'jump' where the executable uses 'jmp' to move to new section
-
-```
-
-### shellasm
-
-Convert shellcode to assembly via capstone
-
-```
-usage: injectx86.py shellasm [-h] -s SHELLCODE [-a {x86}] [-m {x32,x64}] [-S START]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -s SHELLCODE, --shellcode SHELLCODE
-                        shellcode to convert in \xAA\xBB format (can also pass: a python import path via 'py:somefile.someimporttarget', shellcode in \AA format in a file via 'txt:/path/to/file', and binary data in a file
-                        via 'bin:/path/to/binary')
-  -a {x86}, --arch {x86}
-                        architecture (default: x86)
-  -m {x32,x64}, --mode {x32,x64}
-                        mode (default: 64)
-  -S START, --start START
-                        start in hex or decimal format (default: 0x1000)
-
-```
-
-### peinfo
-
-Get basic info from a PE using pefile
-
-```
-usage: injectx86.py peinfo [-h] -f FILE [-i {all,sections,imported,exported,dump,entry,start}]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FILE, --file FILE  path to pe file
-  -i {all,sections,imported,exported,dump,entry,start}, --info {all,sections,imported,exported,dump,entry,start}
-                        information to show
-
 ```
 
 ### Shoulders of Giants:

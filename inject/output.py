@@ -23,6 +23,9 @@ class Output:
         return self.target.stat()
 
     def expand_for_sc(self, shellcode_size: int, file_alignment: int) -> int:
+        self.out(
+            f"[*] Adding extra size for header to shellcode size ({HEADER_SIZE} bytes)"
+        )
         needed_section_size = shellcode_size + HEADER_SIZE
         # TODO: is alignment necessary or correct here?
         expanded_size = align(needed_section_size, file_alignment)

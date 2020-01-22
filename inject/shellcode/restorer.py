@@ -24,24 +24,13 @@ class Restorer(CommonMixin):
         self.should_restore = options.get("should_restore", True)
         super().__init__(options)
 
-    def get_expected_size(self, shellcode: Shellcode):
-        self.data_required()
-
-        return (
-            len(IX86_PUSHAD)
-            + len(shellcode.shellcode)
-            + len(self.data)
-            + len(IX86_POPAD)
-            # + len(IX86_JUMP)  # jump backs, should this be here?
-        )
-
     def apply(self, shellcode: Shellcode):
         self.out("-- Restoring --")
         self.check_requirements()
-        size_when_restoring = self.get_expected_size(shellcode)
-        self.out(f"[*] Shellcode Size When Restoring: {size_when_restoring}")
+        size_pre_restore = len(IX86_PUSHAD) + len(shellcode.shellcode) + len(IX86_POPAD)
+        self.out(f"[*] Shellcode Size Pre Restore: {size_pre_restore}")
         self.outhexi(f"Restore Cave Address", self.cave_address)
-        restore_current_address = self.cave_address + size_when_restoring
+        restore_current_address = self.cave_address + size_pre_restore
 
         if self.nop_data:
             self.out(f"[*] Replacing Restoration data with NOPs")
@@ -97,6 +86,8 @@ class Restorer(CommonMixin):
                         f"[*] Changing JMP/CALL {op.name} to short version {op.deshort().name}"
                     )
                     op = op.deshort()
+                if added_bytes > 0:
+                    self.out(f"[*] Adding {added_bytes} to current address")
                 current_address = current_address + added_bytes
                 if op.is_jmp_call():
                     intended = int(
