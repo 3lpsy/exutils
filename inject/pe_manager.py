@@ -8,15 +8,16 @@ from inject.shellcode import Shellcode
 from inject.output import Output
 from inject.utils import printhexi, align, byteslash, hexstr
 from inject.enums import HEADER_SIZE, RWE_CHARACTERISTIC, IX86_JUMP
+from inject.common import CommonMixin
 
 
-class PEManager:
+class PEManager(CommonMixin):
     def __init__(self, output: Output, options: dict = None):
         self.output = output
         self.pe = PE(str(self.output))
         # Verbosity
         options = options or {}
-        self.log_level = int(options.get("log_level", 1))
+        super().__init__(options)
 
     def dump_basic_info(self):
         self.out("[*] Number of Sections:", self.number_of_sections())
@@ -110,7 +111,7 @@ class PEManager:
         restore_data = self.find_jump_restore_data(jump_ops)
 
         # Provide Shellcode with necessary information
-        if shellcode.should_restore:
+        if shellcode.restorer.should_restore:
             self.out("-- Restore Info --")
             self.out("[*] Saving Restore Data For Later")
             shellcode.set_restore_data(restore_data)
@@ -260,28 +261,3 @@ class PEManager:
         data = self.pe.get_memory_mapped_image()[start : start + 32]
         return self.get_ins_from_data(data, take, offset)
 
-    def get_ins_from_data(self, data: bytes, take: int = 8, offset: int = -1):
-        offset = offset if offset >= 0 else self.address_of_entry_point_rel()
-        c = 0
-        ins = []
-        for i in Cs(CS_ARCH_X86, CS_MODE_32).disasm(data, offset):
-            ins.append(i)
-            if c >= take:
-                return ins
-            c += 1
-        return ins
-
-    def out(self, *msgs, level: int = 1, writer=None):
-        if level >= self.log_level:
-            if writer:
-                writer(*msgs)
-            else:
-                print(*msgs)
-
-    def outhexi(self, *msgs, level: int = 1):
-        self.out(*msgs, level=level, writer=printhexi)
-
-    def outins(self, ins: List[Any], level: int = 1):
-        if level >= self.log_level:
-            for i in ins:
-                print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))

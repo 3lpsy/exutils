@@ -2,7 +2,7 @@ import sys
 from inject.shellcode import Shellcode
 from inject.output import Output
 from inject.pe_manager import PEManager
-
+from inject.common import CommonMixin
 from typing import List
 from pathlib import Path
 from shutil import copy
@@ -15,17 +15,18 @@ HEADER_SIZE = 40
 EXTRA_SIZE_TO_RESTORE = 8
 
 
-class Injector:
+class Injector(CommonMixin):
     def __init__(
         self, shellcode: bytes, file: Path, output: Path, options: dict = None
     ):
         # Verbosity
         options = options or {}
-        self.log_level = int(options.get("log_level", 1))
 
         # Set Basics
         self.shellcode: Shellcode = Shellcode(shellcode, options)
-        self.output: Output = Output(output, file, {"log_level": self.log_level})
+        self.output: Output = Output(
+            output, file, {"log_level": int(options.get("log_level", 1))}
+        )
 
         # Strategies
         self.cave = options.get("cave", "auto")
@@ -33,6 +34,8 @@ class Injector:
 
         # Loaded /Computed Later
         self.manager: PEManager = None
+
+        super().__init__(options)
 
     def inject(self):
         self.setup()
@@ -123,10 +126,3 @@ class Injector:
         if not self.manager:
             return False
         return True
-
-    def out(self, *msgs, level=1, writer=None):
-        if level >= self.log_level:
-            if writer:
-                writer(*msgs)
-            else:
-                print(*msgs)
