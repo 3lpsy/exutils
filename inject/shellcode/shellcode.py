@@ -45,6 +45,10 @@ class Shellcode(CommonMixin):
         if self.fixer.should_fix:
             self.shellcode = self.fixer.apply(self)
 
+        if self.encoder.should_encode:
+            stub = self.encoder.make_stub(self)
+            blob = self.encoder.encode(self)
+
         if self.restorer.should_restore:
             self.shellcode = self.restorer.apply(self)
 

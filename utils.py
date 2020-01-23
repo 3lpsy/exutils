@@ -26,10 +26,10 @@ def printhex(val):
     print(f"{hexstr(val)}")
 
 
-def intbyte(val):
+def intbyte(val: int) -> bytes:
     h = hex(val)[2:]
-    if h == "0":
-        h = "00"
+    if len(h) == 1:
+        h = "0" + h
     b = bytes.fromhex(h)
     return b
 
@@ -37,6 +37,19 @@ def intbyte(val):
 def iterbytes(val):
     for n in val:
         yield intbyte(n)
+
+
+def xorbytes(target: bytes, key: bytes) -> bytes:
+    encoded = bytes()
+    for sci in range(len(target)):
+        # item is int in byte iterator
+        ki = sci % len(key)
+        k = key[ki]
+        sc = target[sci]
+        sc_enc = sc ^ k
+        encoded += intbyte(sc_enc)
+        # print(f"{hex(sc)} ^ {hex(k)} = {hex(sc_enc)}")
+    return encoded
 
 
 def tabluate(headers: List[str], data: List[List[str]], title: str):

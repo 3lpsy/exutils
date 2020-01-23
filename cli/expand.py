@@ -30,7 +30,6 @@ def apply(subparser: _SubParsersAction) -> ArgumentParser:
         "--length",
         type=int,
         help="instead of passing in shellcode, just pass in the length",
-        required=True,
     )
     parser.add_argument(
         "-f", "--file", type=str, help="path to source pe file", required=True

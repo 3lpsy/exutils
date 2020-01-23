@@ -90,6 +90,15 @@ class PEManager(CommonMixin):
         self.save_changes()
         self.refresh()
 
+    # write xor stub to somewhere
+    def write_shellcode_stub(self, shellcode: Shellcode):
+        pass
+
+    # write encoded shellcode to new section
+    def write_shellcode_blob(self, shellcode: Shellcode):
+        pass
+
+    # write shellcode to new section
     def write_shellcode(self, shellcode: Shellcode):
         raw_offset = self.last_section().PointerToRawData
         self.outhexi("Raw Offset for Injection", raw_offset)

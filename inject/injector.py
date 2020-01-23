@@ -31,6 +31,7 @@ class Injector(CommonMixin):
         # Strategies
         self.cave = options.get("cave", "auto")
         self.enter = options.get("enter", "jump")
+        self.encoder = options.get("encoder", "")
 
         # Loaded /Computed Later
         self.manager: PEManager = None
@@ -45,7 +46,6 @@ class Injector(CommonMixin):
         else:
             print(f"[!] Cave option {self.cave} is not supported or recognized.")
             sys.exit()
-
         if self.enter == "new-section":
             self.enter_at_last_section()
             self.manager.save()
@@ -61,7 +61,11 @@ class Injector(CommonMixin):
         else:
             print(f"[!] Enter option {self.enter} is not supported or recognized.")
             sys.exit()
-        self.write_shellcode()
+
+        if self.encoder:
+            self.write_encoded_shellcode()
+        else:
+            self.write_shellcode()
         self.manager.save()
         self.out("-- Injection Complete --", level=3)
 
@@ -77,6 +81,11 @@ class Injector(CommonMixin):
     def enter_with_jump(self):
         self.out("-- Changing Entry Point --", level=2)
         self.manager = self.manager.enter_with_jump(self.shellcode)
+
+    def write_encoded_shellcode(self):
+        self.out("-- Injecting Encoded Shellcode --", level=2)
+        self.manager.write_shellcode_stub(self.shellcode)
+        self.manager.write_shellcode_blob(self.shellcode)
 
     def write_shellcode(self):
         self.out("-- Injecting Shellcode --", level=2)
