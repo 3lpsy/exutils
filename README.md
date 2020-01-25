@@ -30,22 +30,26 @@ $ ./injectx86.py build -s txt:/path/to/payload/local.txt -f samples/puttygen-x86
 ## Usage
 
 ```
-usage: exutils.py [-h] {binasm,build,expand,new-section,peinfo,shellasm} ...
+usage: exutils.py [-h] {binasm,bincave,boofuzz,build,expand,new-section,peinfo,shellasm,shellxor} ...
 
 Inject shellcode into new section
 
 positional arguments:
-  {binasm,build,expand,new-section,peinfo,shellasm}
+  {binasm,bincave,boofuzz,build,expand,new-section,peinfo,shellasm,shellxor}
                         action
     binasm              get asm from shellcode
+    bincave             find code caves
+    boofuzz             boofuzz (highly experimental, typically needs to be customized)
     build               build injected binary
     expand              expand binary (creates a copy)
     new-section         add a new section (copies and expands source file)
     peinfo              get info about pefile
     shellasm            get asm from shellcode
+    shellxor            bitwise xor on shellcode
 
 optional arguments:
   -h, --help            show this help message and exit
+
 
 ```
 
