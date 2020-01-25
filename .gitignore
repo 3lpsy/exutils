@@ -9,3 +9,4 @@ buf.py
 shell.bin
 buf.bin
 __pycache__
+boofuzz-results
